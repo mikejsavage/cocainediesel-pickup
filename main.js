@@ -150,7 +150,7 @@ function unafk( channelID, messageID, userID ) {
 }
 
 function tick() {
-	if( added.length == REQUIRED_PLAYERS ) {
+	if( added.length == config.REQUIRED_PLAYERS ) {
 		const now = unixtime();
 		afkers = added.filter( id => last_message[ id ] < now - config.AFK_TIME );
 		pending_game = { }
@@ -188,10 +188,6 @@ const normal_commands = {
 	},
 
 	who: say_status,
-
-	hlme: function( user ) {
-		say( "<@%s>", user );
-	},
 };
 
 function try_commands( cmds, user, channel, message ) {
