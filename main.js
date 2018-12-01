@@ -196,6 +196,12 @@ const normal_commands = {
 	who: say_status,
 };
 
+const aliases = {
+	"++": normal_commands.add,
+	"--": normal_commands.remove,
+	"??": normal_commands.who,
+};
+
 function try_commands( cmds, user, channel, message ) {
 	const space_pos = message.indexOf( " " );
 	const cmd = space_pos == -1 ? message : message.substr( 0, space_pos );
@@ -223,13 +229,8 @@ client.on( "message", function( user, userID, channelID, message, e ) {
 	if( userID == client.id )
 		return;
 
-	if( message == "++" ) {
-		normal_commands.add( userID );
-		return;
-	}
-
-	if( message == "--" ) {
-		normal_commands.remove( userID );
+	if( aliases[ message ] != undefined ) {
+		aliases[ message ]( userID );
 		return;
 	}
 
