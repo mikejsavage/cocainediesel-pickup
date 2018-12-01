@@ -14,6 +14,15 @@ let client = new Discord.Client( {
 } );
 
 let server;
+let last_channel;
+
+let last_name = { };
+let last_message = { };
+
+let added = [ ];
+let afkers;
+let pending_game;
+
 
 client.on( "ready", function() {
 	for( const server_id in client.servers ) {
@@ -32,17 +41,10 @@ client.on( "ready", function() {
 	console.log( "rdy" );
 } );
 
-let last_name = { };
-let last_message = { };
-let added = [ ];
-let afkers;
-let pending_game;
-
 function unixtime() {
 	return new Date().getTime() / 1000;
 }
 
-let last_channel;
 function say( fmt, ...args ) {
 	if( typeof fmt == "object" ) {
 		say( "%s", fmt.join( "\n" ) );
@@ -68,24 +70,28 @@ function say_status() {
 	say( "%s", get_status() );
 }
 
-function remove_player( user ) {
-	const idx = added.indexOf( user );
+function remove_player( id ) {
+	const idx = added.indexOf( id );
 	if( idx != -1 )
 		added.splice( idx, 1 );
 	return idx != -1;
 }
 
+function emoji_border( emoji, msg ) {
+	msg = msg.map( line => emoji + " " + line );
+	msg.splice( 0, 0, emoji.repeat( 20 ) );
+	msg.push( emoji.repeat( 20 ) );
+	say( msg );
+}
+
 function start_the_game() {
 	const gg = "<:goodgame:" + config.GOODGAME_EMOJI + ">";
-	const msg = [
-		gg.repeat( 20 ),
-		gg + " " + "CONNECT TO THE SERVER: connect " + config.IP + ";password " + config.PASSWORD,
-		gg + " " + "OR CLICK HERE: https://ahacheers.github.io/cocaine-diesel-website/connect?" + config.PASSWORD + "@" + config.IP,
-		gg + " " + added.map( id => "<@" + id + ">" ).join( " " ),
-		( "<:goodgame:" + config.GOODGAME_EMOJI + ">" ).repeat( 20 ),
-	];
+	emoji_border( gg, [
+		"CONNECT TO THE SERVER: connect " + config.IP + ";password " + config.PASSWORD,
+		"OR CLICK HERE: <https://ahacheers.github.io/cocaine-diesel-website/connect?" + config.PASSWORD + "@" + config.IP + ">",
+		added.map( id => "<@" + id + ">" ).join( " " ),
+	] );
 
-	say( msg );
 	added = [ ];
 	afkers = undefined;
 	pending_game = undefined;
@@ -103,25 +109,18 @@ function check_afk( attempt, game ) {
 	if( attempt == config.UNAFK_ATTEMPTS ) {
 		afkers.forEach( id => remove_player( id ) );
 		const td = String.fromCodePoint( 0x1f44e );
-		const msg = [
-			td.repeat( 20 ),
-			td + " " + afkers.map( id => "<@" + id + ">" ).join( " " ) + " fucked it up for everyone",
-			td + " " + get_status(),
-			td.repeat( 20 ),
-		];
-		say( msg );
+		emoji_border( td, [
+			afkers.map( id => "<@" + id + ">" ).join( " " ) + " fucked it up for everyone",
+			get_status(),
+		] );
 		return;
 	}
 
 	const sw = "\u23f1";
-	const msg = [
-		sw.repeat( 20 ),
-		sw + " Some people are AFK! Say something so we can start the game",
-		sw + " " + afkers.map( id => "<@" + id + ">" ).join( " " ),
-		sw.repeat( 20 ),
-	];
-
-	say( msg );
+	emoji_border( sw, [
+		"Some people are AFK! Say something so we can start the game",
+		afkers.map( id => "<@" + id + ">" ).join( " " ),
+	] );
 
 	setTimeout( function() {
 		check_afk( attempt + 1, game );
@@ -173,7 +172,7 @@ const op_commands = {
 		console.log( "exports.PICKUP_CHANNEL = \"%s\";", last_channel );
 	},
 
-	opremove: function( user, args ) {
+	opremove: function( id, args ) {
 		const target = match( /<@(\d+)>/, args );
 		if( target && !remove_player( target ) ) {
 			say( "they aren't added" );
@@ -182,15 +181,15 @@ const op_commands = {
 };
 
 const normal_commands = {
-	add: function( user ) {
-		if( pending_game == undefined && !added.includes( user ) ) {
-			added.push( user );
+	add: function( id ) {
+		if( pending_game == undefined && !added.includes( id ) ) {
+			added.push( id );
 			tick();
 		}
 	},
 
-	remove: function( user ) {
-		if( pending_game == undefined && remove_player( user ) ) {
+	remove: function( id ) {
+		if( pending_game == undefined && remove_player( id ) ) {
 			say_status();
 		}
 	},
