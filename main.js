@@ -149,18 +149,6 @@ function unafk( channelID, messageID, userID ) {
 	}
 }
 
-function tick() {
-	if( added.length == config.REQUIRED_PLAYERS ) {
-		const now = unixtime();
-		afkers = added.filter( id => last_message[ id ] < now - config.AFK_TIME );
-		pending_game = { }
-		check_afk( 0, pending_game );
-		return;
-	}
-
-	say_status();
-}
-
 function match( re, str ) {
 	const matches = re.exec( str );
 	if( matches == undefined )
@@ -183,10 +171,20 @@ const op_commands = {
 
 const normal_commands = {
 	add: function( id ) {
-		if( pending_game == undefined && !added.includes( id ) ) {
-			added.push( id );
-			tick();
+		if( pending_game != undefined || added.includes( id ) )
+			return;
+
+		added.push( id );
+
+		if( added.length < config.REQUIRED_PLAYERS ) {
+			say_status();
+			return;
 		}
+
+		const now = unixtime();
+		afkers = added.filter( id => last_message[ id ] < now - config.AFK_TIME );
+		pending_game = { }
+		check_afk( 0, pending_game );
 	},
 
 	remove: function( id ) {
@@ -220,13 +218,23 @@ client.on( "message", function( user, userID, channelID, message, e ) {
 	if( config.PICKUP_CHANNEL != undefined && channelID != config.PICKUP_CHANNEL )
 		return;
 
+	last_channel = channelID;
+
 	if( userID == client.id )
 		return;
 
+	if( message == "++" ) {
+		normal_commands.add( userID );
+		return;
+	}
+
+	if( message == "--" ) {
+		normal_commands.remove( userID );
+		return;
+	}
+
 	if( message[ 0 ] != '!' )
 		return;
-
-	last_channel = channelID;
 
 	const is_op = e.d.member.roles.includes( config.OP_ROLE );
 	if( is_op && try_commands( op_commands, userID, channelID, message.substr( 1 ) ) )
