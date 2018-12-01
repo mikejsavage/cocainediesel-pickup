@@ -161,13 +161,21 @@ function tick() {
 	say_status();
 }
 
+function match( re, str ) {
+	const matches = re.exec( str );
+	if( matches == undefined )
+		return undefined;
+	return matches[ 1 ];
+}
+
 const op_commands = {
 	pickuphere: function() {
 		console.log( "exports.PICKUP_CHANNEL = \"%s\";", last_channel );
 	},
 
 	opremove: function( user, args ) {
-		if( !remove_player( args ) ) {
+		const target = match( /<@(\d+)>/, args );
+		if( target && !remove_player( target ) ) {
 			say( "they aren't added" );
 		}
 	},
