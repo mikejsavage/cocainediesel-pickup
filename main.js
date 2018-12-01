@@ -80,7 +80,7 @@ function start_the_game() {
 	const msg = [
 		gg.repeat( 20 ),
 		gg + " " + "CONNECT TO THE SERVER: connect " + config.IP + ";password " + config.PASSWORD,
-		gg + " " + "OR CLICK HERE: https://ahacheers.github.io/cocaine-diesel-website/connect.html?" + config.PASSWORD + "@" + config.IP,
+		gg + " " + "OR CLICK HERE: https://ahacheers.github.io/cocaine-diesel-website/connect?" + config.PASSWORD + "@" + config.IP,
 		gg + " " + added.map( id => "<@" + id + ">" ).join( " " ),
 		( "<:goodgame:" + config.GOODGAME_EMOJI + ">" ).repeat( 20 ),
 	];
