@@ -38,7 +38,8 @@ client.on( "ready", function() {
 		}
 		client.disconnect();
 	}
-	console.log( "rdy" );
+
+	console.log( "Connected" );
 } );
 
 function unixtime() {
