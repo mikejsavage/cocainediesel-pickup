@@ -26,9 +26,10 @@ exports.IP = "1.2.3.4";
 exports.PASSWORD = "pickup";
 	
 exports.REQUIRED_PLAYERS = 2;
-exports.AFK_TIME = 5 * 60;
-exports.UNAFK_DELAY = 30000;
+exports.AFK_TIME = 10 * 60;
+exports.UNAFK_DELAY = 30;
 exports.UNAFK_HIGHLIGHTS = 4;
+exports.OFFLINE_DELAY = 5 * 60;
 ```
 
 and then run:

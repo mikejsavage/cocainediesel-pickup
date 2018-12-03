@@ -249,10 +249,30 @@ client.on( "message", function( user, userID, channelID, message, e ) {
 	try_commands( normal_commands, userID, channelID, message.substr( 1 ) );
 } );
 
+let offline_uniques = { };
+
+function remove_offline( user, userID, unique ) {
+	if( unique != offline_uniques[ userID ] )
+		return;
+
+	if( remove_player( userID ) ) {
+		say( [
+			user + " went offline and was removed",
+			get_status(),
+		] );
+	}
+}
+
 client.on( "presence", function( user, userID, status ) {
+	if( status == "online" ) {
+		offline_uniques[ userID ] = undefined;
+	}
+
 	if( status == "offline" ) {
-		if( remove_player( userID ) ) {
-			say( "%s went offline and was removed", user );
-		}
+		// mark them as AFK and remove them if they don't come back
+		last_message[ userID ] = unixtime() - config.AFK_TIME - 1;
+		const unique = make_unique();
+		offline_uniques[ userID ] = unique;
+		setTimeout( () => remove_offline( user, userID, unique ), config.OFFLINE_DELAY * 1000 );
 	}
 } );
