@@ -276,3 +276,12 @@ client.on( "presence", function( user, userID, status ) {
 		setTimeout( () => remove_offline( user, userID, unique ), config.OFFLINE_DELAY * 1000 );
 	}
 } );
+
+client.on( "guildMemberRemove", function( member ) {
+	if( remove_player( member.id ) ) {
+		say( [
+			member.username + " left the server and was removed",
+			get_status(),
+		] );
+	}
+} );
