@@ -21,8 +21,7 @@ let last_message = { };
 
 let added = [ ];
 let afkers;
-let pending_game;
-
+let pending_game_unique;
 
 client.on( "ready", function() {
 	for( const server_id in client.servers ) {
@@ -41,6 +40,14 @@ client.on( "ready", function() {
 
 	console.log( "Connected" );
 } );
+
+// returns a unique value so we can compare with some reference to make sure it
+// hasn't changed. used to e.g. halt the first set of afk checks if two games
+// start right after each other
+// implementation is trivial but give it a name for documentation purposes
+function make_unique() {
+	return { };
+}
 
 function unixtime() {
 	return new Date().getTime() / 1000;
@@ -95,11 +102,11 @@ function start_the_game() {
 
 	added = [ ];
 	afkers = undefined;
-	pending_game = undefined;
+	pending_game_unique = undefined;
 }
 
-function check_afk( attempt, game ) {
-	if( game != pending_game )
+function check_afk( attempt, unique ) {
+	if( unique != pending_game_unique )
 		return;
 
 	if( afkers.length == 0 ) {
@@ -123,9 +130,7 @@ function check_afk( attempt, game ) {
 		afkers.map( id => "<@" + id + ">" ).join( " " ),
 	] );
 
-	setTimeout( function() {
-		check_afk( attempt + 1, game );
-	}, config.UNAFK_DELAY );
+	setTimeout( () => check_afk( attempt + 1, unique ), config.UNAFK_DELAY * 1000 );
 }
 
 function unafk( channelID, messageID, userID ) {
@@ -171,7 +176,7 @@ const op_commands = {
 
 const normal_commands = {
 	add: function( id ) {
-		if( pending_game != undefined || added.includes( id ) )
+		if( pending_game_unique != undefined || added.includes( id ) )
 			return;
 
 		added.push( id );
@@ -183,12 +188,12 @@ const normal_commands = {
 
 		const now = unixtime();
 		afkers = added.filter( id => last_message[ id ] < now - config.AFK_TIME );
-		pending_game = { }
-		check_afk( 0, pending_game );
+		pending_game_unique = make_unique();
+		check_afk( 0, pending_game_unique );
 	},
 
 	remove: function( id ) {
-		if( pending_game == undefined && remove_player( id ) ) {
+		if( pending_game_unique == undefined && remove_player( id ) ) {
 			say_status();
 		}
 	},
