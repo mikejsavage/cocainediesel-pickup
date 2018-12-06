@@ -22,10 +22,12 @@ exports.PICKUP_CHANNEL = "";
 // find an emoji ID
 exports.GOODGAME_EMOJI = "";
 
+exports.GAMETYPES = { "5v5": 10, "3v3": 6 };
+exports.DEFAULT_GAMETYPE = "5v5";
+
 exports.IP = "1.2.3.4";
 exports.PASSWORD = "pickup";
 	
-exports.REQUIRED_PLAYERS = 2;
 exports.AFK_TIME = 10 * 60;
 exports.UNAFK_DELAY = 30;
 exports.UNAFK_HIGHLIGHTS = 4;

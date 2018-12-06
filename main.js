@@ -19,8 +19,13 @@ let last_channel;
 let last_name = { };
 let last_message = { };
 
-let added = [ ];
+let gametypes = { };
+for( let gt in config.GAMETYPES ) {
+	gametypes[ gt ] = { required: config.GAMETYPES[ gt ], added: [ ] };
+};
+
 let afkers;
+let pending_gt;
 let pending_game_unique;
 
 client.on( "ready", function() {
@@ -69,20 +74,53 @@ function get_name( id ) {
 	return server.members[ id ].nick || last_name[ id ];
 }
 
-function get_status() {
-	const names = added.length == 0 ? "frown town" : added.map( get_name ).join( ", " );
-	return util.format( "%d/%d: %s", added.length, config.REQUIRED_PLAYERS, names );
+function pad_left( v, width ) {
+	let s = String( v );
+	return " ".repeat( width - s.length ) + v;
 }
 
-function say_status() {
-	say( "%s", get_status() );
+function pad_right( v, width ) {
+	let s = String( v );
+	return v + " ".repeat( width - s.length );
 }
 
-function remove_player( id ) {
-	const idx = added.indexOf( id );
+function gametype_status( name ) {
+	let gt = gametypes[ name ];
+	const names = gt.added.length == 0 ? "frown town" : gt.added.map( get_name ).join( ", " );
+	return util.format( "%s %s/%s: %s", pad_right( name, 9 ), pad_left( gt.added.length, 2 ), pad_left( gt.required, 2 ), names );
+}
+
+function sorted_gametypes() {
+	let sorted = [ ];
+	for( let gt in gametypes ) {
+		sorted.push( gt );
+	}
+
+	sorted.sort( ( a, b ) => gametypes[ a ].added.length < gametypes[ b ].added.length );
+
+	return sorted;
+}
+
+function brief_status() {
+	let gts = sorted_gametypes();
+	gts = gts.map( gt => util.format( "%s: %d/%d", gt, gametypes[ gt ].added.length, gametypes[ gt ].required ) );
+	return gts.join( " - " );
+}
+
+function remove_player( gt, id ) {
+	const idx = gametypes[ gt ].added.indexOf( id );
 	if( idx != -1 )
-		added.splice( idx, 1 );
+		gametypes[ gt ].added.splice( idx, 1 );
 	return idx != -1;
+}
+
+function remove_player_from_all( id ) {
+	let was_added = false;
+	for( let gt in gametypes ) {
+		if( remove_player( gt, id ) )
+			was_added = true;
+	}
+	return was_added;
 }
 
 function emoji_border( emoji, msg ) {
@@ -97,11 +135,15 @@ function start_the_game() {
 	emoji_border( gg, [
 		"CONNECT TO THE SERVER: connect " + config.IP + ";password " + config.PASSWORD,
 		"OR CLICK HERE: <https://ahacheers.github.io/cocaine-diesel-website/connect?" + config.PASSWORD + "@" + config.IP + ">",
-		added.map( id => "<@" + id + ">" ).join( " " ),
+		gametypes[ pending_gt ].added.map( id => "<@" + id + ">" ).join( " " ),
 	] );
 
-	added = [ ];
+	for( let id of gametypes[ pending_gt ].added ) {
+		remove_player_from_all( id );
+	}
+
 	afkers = undefined;
+	pending_gt = undefined;
 	pending_game_unique = undefined;
 }
 
@@ -115,11 +157,11 @@ function check_afk( attempt, unique ) {
 	}
 
 	if( attempt == config.UNAFK_ATTEMPTS ) {
-		afkers.forEach( id => remove_player( id ) );
+		afkers.forEach( id => remove_player_from_all( id ) );
 		const td = String.fromCodePoint( 0x1f44e );
 		emoji_border( td, [
 			afkers.map( id => "<@" + id + ">" ).join( " " ) + " fucked it up for everyone",
-			get_status(),
+			brief_status(),
 		] );
 		return;
 	}
@@ -154,6 +196,10 @@ function unafk( channelID, messageID, userID ) {
 	}
 }
 
+function words( str ) {
+	return str.split( " " ).filter( word => word.length > 0 );
+}
+
 function match( re, str ) {
 	const matches = re.exec( str );
 	if( matches == undefined )
@@ -167,38 +213,80 @@ const op_commands = {
 	},
 
 	opremove: function( id, args ) {
+		if( pending_game_unique != undefined )
+			return;
+
 		const target = match( /<@(\d+)>/, args );
-		if( target && !remove_player( target ) ) {
+		if( target && !remove_player_from_all( target ) ) {
 			say( "they aren't added" );
 		}
 	},
 };
 
 const normal_commands = {
-	add: function( id ) {
-		if( pending_game_unique != undefined || added.includes( id ) )
+	add: function( id, args ) {
+		if( pending_game_unique != undefined )
 			return;
 
-		added.push( id );
+		let gts = words( args );
+		if( gts.length == 0 )
+			gts = [ config.DEFAULT_GAMETYPE ];
 
-		if( added.length < config.REQUIRED_PLAYERS ) {
-			say_status();
+		let did_add = false;
+		for( let gt of gts ) {
+			if( !( gt in gametypes ) )
+				continue;
+
+			if( gametypes[ gt ].added.includes( id ) )
+				continue;
+
+			gametypes[ gt ].added.push( id );
+			did_add = true;
+
+			if( gametypes[ gt ].added.length == gametypes[ gt ].required ) {
+				const now = unixtime();
+				afkers = gametypes[ gt ].added.filter( id => last_message[ id ] < now - config.AFK_TIME );
+				pending_gt = gt;
+				pending_game_unique = make_unique();
+				check_afk( 0, pending_game_unique );
+				return;
+			}
+		}
+
+		if( did_add )
+			say( "%s", brief_status() );
+	},
+
+	remove: function( id, args ) {
+		if( pending_game_unique != undefined )
 			return;
+
+		let was_added = false;
+
+		let gts = words( args );
+		if( gts.length == 0 ) {
+			was_added = remove_player_from_all( id );
+		}
+		else {
+			for( let gt of gts ) {
+				if( !( gt in gametypes ) )
+					continue;
+
+				if( remove_player( gt, id ) )
+					was_added = true;
+			}
 		}
 
-		const now = unixtime();
-		afkers = added.filter( id => last_message[ id ] < now - config.AFK_TIME );
-		pending_game_unique = make_unique();
-		check_afk( 0, pending_game_unique );
+		if( was_added )
+			say( "%s", brief_status() );
 	},
 
-	remove: function( id ) {
-		if( pending_game_unique == undefined && remove_player( id ) ) {
-			say_status();
-		}
+	who: function() {
+		let gts = sorted_gametypes().map( gametype_status );
+		gts.splice( 0, 0, "```" );
+		gts.push( "```" );
+		say( gts );
 	},
-
-	who: say_status,
 };
 
 const aliases = {
@@ -237,7 +325,7 @@ client.on( "message", function( user, userID, channelID, message, e ) {
 	message = message.toLowerCase();
 
 	if( aliases[ message ] != undefined ) {
-		aliases[ message ]( userID );
+		aliases[ message ]( userID, "" );
 		return;
 	}
 
@@ -257,10 +345,10 @@ function remove_offline( user, userID, unique ) {
 	if( unique != offline_uniques[ userID ] )
 		return;
 
-	if( remove_player( userID ) ) {
+	if( remove_player_from_all( userID ) ) {
 		say( [
 			user + " went offline and was removed",
-			get_status(),
+			brief_status(),
 		] );
 	}
 }
@@ -280,10 +368,10 @@ client.on( "presence", function( user, userID, status ) {
 } );
 
 client.on( "guildMemberRemove", function( member ) {
-	if( remove_player( member.id ) ) {
+	if( remove_player_from_all( member.id ) ) {
 		say( [
 			member.username + " left the server and was removed",
-			get_status(),
+			brief_status(),
 		] );
 	}
 } );
