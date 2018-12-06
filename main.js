@@ -74,20 +74,12 @@ function get_name( id ) {
 	return server.members[ id ].nick || last_name[ id ];
 }
 
-function pad_left( v, width ) {
-	let s = String( v );
-	return " ".repeat( width - s.length ) + v;
-}
-
-function pad_right( v, width ) {
-	let s = String( v );
-	return v + " ".repeat( width - s.length );
-}
-
 function gametype_status( name ) {
 	let gt = gametypes[ name ];
 	const names = gt.added.length == 0 ? "frown town" : gt.added.map( get_name ).join( ", " );
-	return util.format( "%s %s/%s: %s", pad_right( name, 9 ), pad_left( gt.added.length, 2 ), pad_left( gt.required, 2 ), names );
+	let added = String( gt.added.length ).padStart( 2 );
+	let required = String( gt.required ).padStart( 2 );
+	return util.format( "%s %s/%s: %s", name.padEnd( 9 ), added, required, names );
 }
 
 function sorted_gametypes() {
