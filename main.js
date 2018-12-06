@@ -234,6 +234,8 @@ client.on( "message", function( user, userID, channelID, message, e ) {
 	if( userID == client.id )
 		return;
 
+	message = message.toLowerCase();
+
 	if( aliases[ message ] != undefined ) {
 		aliases[ message ]( userID );
 		return;
