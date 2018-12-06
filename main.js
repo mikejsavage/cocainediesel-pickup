@@ -280,16 +280,16 @@ const op_commands = {
 };
 
 const normal_commands = [
-	{ pattern: /!add\s*(.*)/, callback: add_command },
-	{ pattern: /\+\+/, callback: add_command },
-	{ pattern: /\+(.+)/, callback: add_command },
+	{ pattern: /^!add\s*(.*)/, callback: add_command },
+	{ pattern: /^\+\+/, callback: add_command },
+	{ pattern: /^\+(.+)/, callback: add_command },
 
-	{ pattern: /!remove\s*(.*)/, callback: remove_command },
-	{ pattern: /--/, callback: remove_command },
-	{ pattern: /-(.+)/, callback: remove_command },
+	{ pattern: /^!remove\s*(.*)/, callback: remove_command },
+	{ pattern: /^--/, callback: remove_command },
+	{ pattern: /^-(.+)/, callback: remove_command },
 
-	{ pattern: /!who/, callback: who_command },
-	{ pattern: /\?\?/, callback: who_command },
+	{ pattern: /^!who/, callback: who_command },
+	{ pattern: /^\?\?/, callback: who_command },
 ];
 
 function try_commands( cmds, user, channel, message ) {
