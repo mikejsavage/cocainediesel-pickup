@@ -76,9 +76,9 @@ function get_name( id ) {
 
 function gametype_status( name ) {
 	let gt = gametypes[ name ];
-	const names = gt.added.length == 0 ? "frown town" : gt.added.map( get_name ).join( ", " );
 	let added = String( gt.added.length ).padStart( 2 );
 	let required = String( gt.required ).padStart( 2 );
+	const names = gt.added.length == 0 ? "frown town" : gt.added.map( get_name ).join( ", " );
 	return util.format( "%s %s/%s: %s", name.padEnd( 9 ), added, required, names );
 }
 
@@ -95,7 +95,7 @@ function sorted_gametypes() {
 
 function brief_status() {
 	let gts = sorted_gametypes();
-	gts = gts.map( gt => util.format( "%s: %d/%d", gt, gametypes[ gt ].added.length, gametypes[ gt ].required ) );
+	gts = gts.map( gt => util.format( "%s [%d/%d]", gt, gametypes[ gt ].added.length, gametypes[ gt ].required ) );
 	return gts.join( " - " );
 }
 
