@@ -199,6 +199,70 @@ function match( re, str ) {
 	return matches[ 1 ];
 }
 
+function add_command( id, args ) {
+	if( pending_game_unique != undefined )
+		return;
+
+	let gts = words( args );
+	if( gts.length == 0 )
+		gts = [ config.DEFAULT_GAMETYPE ];
+
+	let did_add = false;
+	for( let gt of gts ) {
+		if( !( gt in gametypes ) )
+			continue;
+
+		if( gametypes[ gt ].added.includes( id ) )
+			continue;
+
+		gametypes[ gt ].added.push( id );
+		did_add = true;
+
+		if( gametypes[ gt ].added.length == gametypes[ gt ].required ) {
+			const now = unixtime();
+			afkers = gametypes[ gt ].added.filter( id => last_message[ id ] < now - config.AFK_TIME );
+			pending_gt = gt;
+			pending_game_unique = make_unique();
+			check_afk( 0, pending_game_unique );
+			return;
+		}
+	}
+
+	if( did_add )
+		say( "%s", brief_status() );
+}
+
+function remove_command( id, args ) {
+	if( pending_game_unique != undefined )
+		return;
+
+	let was_added = false;
+
+	let gts = words( args );
+	if( gts.length == 0 ) {
+		was_added = remove_player_from_all( id );
+	}
+	else {
+		for( let gt of gts ) {
+			if( !( gt in gametypes ) )
+				continue;
+
+			if( remove_player( gt, id ) )
+				was_added = true;
+		}
+	}
+
+	if( was_added )
+		say( "%s", brief_status() );
+}
+
+function who_command() {
+	let gts = sorted_gametypes().map( gametype_status );
+	gts.splice( 0, 0, "```" );
+	gts.push( "```" );
+	say( gts );
+}
+
 const op_commands = {
 	pickuphere: function() {
 		console.log( "exports.PICKUP_CHANNEL = \"%s\";", last_channel );
@@ -215,77 +279,18 @@ const op_commands = {
 	},
 };
 
-const normal_commands = {
-	add: function( id, args ) {
-		if( pending_game_unique != undefined )
-			return;
+const normal_commands = [
+	{ pattern: /!add\s*(.*)/, callback: add_command },
+	{ pattern: /\+\+/, callback: add_command },
+	{ pattern: /\+(.+)/, callback: add_command },
 
-		let gts = words( args );
-		if( gts.length == 0 )
-			gts = [ config.DEFAULT_GAMETYPE ];
+	{ pattern: /!remove\s*(.*)/, callback: remove_command },
+	{ pattern: /--/, callback: remove_command },
+	{ pattern: /-(.+)/, callback: remove_command },
 
-		let did_add = false;
-		for( let gt of gts ) {
-			if( !( gt in gametypes ) )
-				continue;
-
-			if( gametypes[ gt ].added.includes( id ) )
-				continue;
-
-			gametypes[ gt ].added.push( id );
-			did_add = true;
-
-			if( gametypes[ gt ].added.length == gametypes[ gt ].required ) {
-				const now = unixtime();
-				afkers = gametypes[ gt ].added.filter( id => last_message[ id ] < now - config.AFK_TIME );
-				pending_gt = gt;
-				pending_game_unique = make_unique();
-				check_afk( 0, pending_game_unique );
-				return;
-			}
-		}
-
-		if( did_add )
-			say( "%s", brief_status() );
-	},
-
-	remove: function( id, args ) {
-		if( pending_game_unique != undefined )
-			return;
-
-		let was_added = false;
-
-		let gts = words( args );
-		if( gts.length == 0 ) {
-			was_added = remove_player_from_all( id );
-		}
-		else {
-			for( let gt of gts ) {
-				if( !( gt in gametypes ) )
-					continue;
-
-				if( remove_player( gt, id ) )
-					was_added = true;
-			}
-		}
-
-		if( was_added )
-			say( "%s", brief_status() );
-	},
-
-	who: function() {
-		let gts = sorted_gametypes().map( gametype_status );
-		gts.splice( 0, 0, "```" );
-		gts.push( "```" );
-		say( gts );
-	},
-};
-
-const aliases = {
-	"++": normal_commands.add,
-	"--": normal_commands.remove,
-	"??": normal_commands.who,
-};
+	{ pattern: /!who/, callback: who_command },
+	{ pattern: /\?\?/, callback: who_command },
+];
 
 function try_commands( cmds, user, channel, message ) {
 	const space_pos = message.indexOf( " " );
@@ -316,19 +321,18 @@ client.on( "message", function( user, userID, channelID, message, e ) {
 
 	message = message.toLowerCase();
 
-	if( aliases[ message ] != undefined ) {
-		aliases[ message ]( userID, "" );
-		return;
+	if( message[ 0 ] == '!' ) {
+		const is_op = e.d.member.roles.includes( config.OP_ROLE );
+		if( is_op && try_commands( op_commands, userID, channelID, message.substr( 1 ) ) )
+			return;
 	}
 
-	if( message[ 0 ] != '!' )
-		return;
-
-	const is_op = e.d.member.roles.includes( config.OP_ROLE );
-	if( is_op && try_commands( op_commands, userID, channelID, message.substr( 1 ) ) )
-		return;
-
-	try_commands( normal_commands, userID, channelID, message.substr( 1 ) );
+	for( let cmd of normal_commands ) {
+		let e = cmd.pattern.exec( message );
+		if( e == null )
+			continue;
+		cmd.callback( userID, e[ 1 ] || "" );
+	}
 } );
 
 let offline_uniques = { };
