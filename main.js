@@ -122,6 +122,10 @@ function emoji_border( emoji, msg ) {
 	say( msg );
 }
 
+function copy_array( arr ) {
+	return arr.slice();
+}
+
 function start_the_game() {
 	const gg = "<:goodgame:" + config.GOODGAME_EMOJI + ">";
 	emoji_border( gg, [
@@ -130,7 +134,8 @@ function start_the_game() {
 		gametypes[ pending_gt ].added.map( id => "<@" + id + ">" ).join( " " ),
 	] );
 
-	for( let id of gametypes[ pending_gt ].added ) {
+	let added_copy = copy_array( gametypes[ pending_gt ].added );
+	for( let id of added_copy ) {
 		remove_player_from_all( id );
 	}
 
