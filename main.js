@@ -153,7 +153,7 @@ function check_afk( attempt, unique ) {
 		return;
 	}
 
-	if( attempt == config.UNAFK_ATTEMPTS ) {
+	if( attempt == config.UNAFK_HIGHLIGHTS ) {
 		afkers.forEach( id => remove_player_from_all( id ) );
 		const td = String.fromCodePoint( 0x1f44e );
 		emoji_border( td, [
