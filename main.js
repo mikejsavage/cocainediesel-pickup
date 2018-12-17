@@ -160,6 +160,11 @@ function check_afk( attempt, unique ) {
 			afkers.map( id => "<@" + id + ">" ).join( " " ) + " fucked it up for everyone",
 			brief_status(),
 		] );
+
+		afkers = undefined;
+		pending_gt = undefined;
+		pending_game_unique = undefined;
+
 		return;
 	}
 
