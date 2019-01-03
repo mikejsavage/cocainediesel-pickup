@@ -130,7 +130,7 @@ function start_the_game() {
 	const gg = "<:goodgame:" + config.GOODGAME_EMOJI + ">";
 	emoji_border( gg, [
 		"CONNECT TO THE SERVER: connect " + config.IP + ";password " + config.PASSWORD,
-		"OR CLICK HERE: <https://ahacheers.github.io/cocaine-diesel-website/connect?" + config.PASSWORD + "@" + config.IP + ">",
+		"OR CLICK HERE: <https://cocainediesel.fun/connect?" + config.PASSWORD + "@" + config.IP + ">",
 		gametypes[ pending_gt ].added.map( id => "<@" + id + ">" ).join( " " ),
 	] );
 
