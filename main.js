@@ -283,8 +283,12 @@ const op_commands = {
 			return;
 
 		const target = match( /<@(\d+)>/, args );
-		if( target && !remove_player_from_all( target ) ) {
-			say( "they aren't added" );
+		if( target ) {
+			let was_added = remove_player_from_all( target );
+			if( was_added )
+				say( "%s", brief_status() );
+			else
+				say( "they aren't added" );
 		}
 	},
 };
