@@ -76,7 +76,7 @@ function get_name( id ) {
 
 function pad_centred( str, width ) {
 	let left = Math.floor( ( width - str.length ) / 2 );
-	let right = width - left;
+	let right = width - str.length - left;
 	return " ".repeat( left ) + str + " ".repeat( right );
 }
 
