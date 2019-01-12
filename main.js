@@ -74,12 +74,18 @@ function get_name( id ) {
 	return server.members[ id ].nick || last_name[ id ];
 }
 
+function pad_centred( str, width ) {
+	let left = Math.floor( ( width - str ) / 2 );
+	let right = width - left;
+	return " ".repeat( left ) + str + " ".repeat( right );
+}
+
 function gametype_status( name ) {
 	let gt = gametypes[ name ];
 	let added = String( gt.added.length ).padStart( 2 );
 	let required = String( gt.required ).padEnd( 2 );
 	const names = gt.added.length == 0 ? "dead game" : gt.added.map( get_name ).join( ", " );
-	return util.format( "%s/%s [%s] %s", added, required, name.padEnd( 9 ), names );
+	return util.format( "%s/%s |%s| %s", added, required, pad_centred( name, 11 ), names );
 }
 
 function sorted_gametypes() {
