@@ -77,9 +77,9 @@ function get_name( id ) {
 function gametype_status( name ) {
 	let gt = gametypes[ name ];
 	let added = String( gt.added.length ).padStart( 2 );
-	let required = String( gt.required ).padStart( 2 );
+	let required = String( gt.required ).padEnd( 2 );
 	const names = gt.added.length == 0 ? "dead game" : gt.added.map( get_name ).join( ", " );
-	return util.format( "%s %s/%s: %s", name.padEnd( 9 ), added, required, names );
+	return util.format( "%s/%s [%s] %s", added, required, name.padEnd( 9 ), names );
 }
 
 function sorted_gametypes() {
