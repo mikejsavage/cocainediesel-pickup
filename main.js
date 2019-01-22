@@ -71,7 +71,8 @@ function say( fmt, ...args ) {
 }
 
 function get_name( id ) {
-	return server.members[ id ].nick || last_name[ id ];
+	let name = server.members[ id ] != null ? server.members[ id ].nick : null;
+	return name != null ? name : last_name[ id ];
 }
 
 function pad_centred( str, width ) {
