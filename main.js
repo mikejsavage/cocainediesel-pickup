@@ -8,11 +8,7 @@ const Discord = require( "discord" );
 
 const config = require( "./config" );
 
-let client = new Discord.Client( {
-	autorun: true,
-	token: config.TOKEN,
-} );
-
+let client;
 let server;
 let last_channel;
 
@@ -27,24 +23,6 @@ for( let gt in config.GAMETYPES ) {
 let afkers;
 let pending_gt;
 let pending_game_unique;
-
-client.on( "ready", function() {
-	for( const server_id in client.servers ) {
-		server = client.servers[ server_id ];
-		break;
-	}
-
-	if( config.OP_ROLE == undefined || config.OP_ROLE == "" ) {
-		console.log( "You need to set OP_ROLE" );
-		for( const role_id in server.roles ) {
-			const role = client.servers[ server_id ].roles[ role_id ];
-			console.log( "Role %s: exports.OP_ROLE = \"%s\";", role.name, role_id );
-		}
-		client.disconnect();
-	}
-
-	console.log( "Connected" );
-} );
 
 // returns a unique value so we can compare with some reference to make sure it
 // hasn't changed. used to e.g. halt the first set of afk checks if two games
@@ -326,7 +304,39 @@ function try_commands( cmds, user, channel, message ) {
 	return false;
 }
 
-client.on( "message", function( user, userID, channelID, message, e ) {
+let offline_uniques = { };
+
+function remove_offline( user, userID, unique ) {
+	if( unique != offline_uniques[ userID ] )
+		return;
+
+	if( remove_player_from_all( userID ) ) {
+		say( [
+			user + " went offline and was removed",
+			brief_status(),
+		] );
+	}
+}
+
+function on_ready() {
+	for( const server_id in client.servers ) {
+		server = client.servers[ server_id ];
+		break;
+	}
+
+	if( config.OP_ROLE == undefined || config.OP_ROLE == "" ) {
+		console.log( "You need to set OP_ROLE" );
+		for( const role_id in server.roles ) {
+			const role = client.servers[ server_id ].roles[ role_id ];
+			console.log( "Role %s: exports.OP_ROLE = \"%s\";", role.name, role_id );
+		}
+		process.exit( 1 )
+	}
+
+	console.log( "Connected" );
+}
+
+function on_message( user, userID, channelID, message, e ) {
 	last_name[ userID ] = user;
 	last_message[ userID ] = unixtime();
 
@@ -354,23 +364,9 @@ client.on( "message", function( user, userID, channelID, message, e ) {
 			continue;
 		cmd.callback( userID, e[ 1 ] || "" );
 	}
-} );
-
-let offline_uniques = { };
-
-function remove_offline( user, userID, unique ) {
-	if( unique != offline_uniques[ userID ] )
-		return;
-
-	if( remove_player_from_all( userID ) ) {
-		say( [
-			user + " went offline and was removed",
-			brief_status(),
-		] );
-	}
 }
 
-client.on( "presence", function( user, userID, status ) {
+function on_presence( user, userID, status ) {
 	if( status == "online" ) {
 		offline_uniques[ userID ] = undefined;
 	}
@@ -382,13 +378,28 @@ client.on( "presence", function( user, userID, status ) {
 		offline_uniques[ userID ] = unique;
 		setTimeout( () => remove_offline( user, userID, unique ), config.OFFLINE_DELAY * 1000 );
 	}
-} );
+}
 
-client.on( "guildMemberRemove", function( member ) {
+function on_guildMemberRemove( member ) {
 	if( remove_player_from_all( member.id ) ) {
 		say( [
 			member.username + " left the server and was removed",
 			brief_status(),
 		] );
 	}
-} );
+}
+
+function connect() {
+	client = new Discord.Client( {
+		autorun: true,
+		token: config.TOKEN,
+	} );
+
+	client.on( "ready", on_ready );
+	client.on( "message", on_message );
+	client.on( "presence", on_presence );
+	client.on( "guildMemberRemove", on_guildMemberRemove );
+	client.on( "disconnect", connect );
+}
+
+connect();
