@@ -218,7 +218,7 @@ function add_command( id, args ) {
 			afkers = gametypes[ gt ].added.filter( id => last_message[ id ] < now - config.AFK_TIME );
 			pending_gt = gt;
 			pending_game_unique = make_unique();
-			check_afk( 0, pending_game_unique );
+			check_afk( 1, pending_game_unique );
 			return;
 		}
 	}
