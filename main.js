@@ -101,7 +101,6 @@ function remove_player_from_all( id ) {
 }
 
 function emoji_border( emoji, msg ) {
-	msg = msg.map( line => emoji + " " + line );
 	msg.splice( 0, 0, emoji.repeat( 20 ) );
 	msg.push( emoji.repeat( 20 ) );
 	say( msg );
@@ -140,8 +139,8 @@ function check_afk( attempt, unique ) {
 
 	if( attempt == config.UNAFK_HIGHLIGHTS ) {
 		afkers.forEach( id => remove_player_from_all( id ) );
-		const td = String.fromCodePoint( 0x1f44e );
-		emoji_border( td, [
+		const cross = "\u274c";
+		emoji_border( cross, [
 			afkers.map( id => "<@" + id + ">" ).join( " " ) + " fucked it up for everyone",
 			brief_status(),
 		] );
@@ -153,8 +152,8 @@ function check_afk( attempt, unique ) {
 		return;
 	}
 
-	const sw = "\u23f1";
-	emoji_border( sw, [
+	const warning = "\u26a0";
+	emoji_border( warning, [
 		"Some people are AFK! Say something so we can start the game",
 		afkers.map( id => "<@" + id + ">" ).join( " " ),
 	] );
