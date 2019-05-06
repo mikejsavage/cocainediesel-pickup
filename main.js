@@ -326,7 +326,7 @@ function on_ready() {
 	if( config.OP_ROLE == undefined || config.OP_ROLE == "" ) {
 		console.log( "You need to set OP_ROLE" );
 		for( const role_id in server.roles ) {
-			const role = client.servers[ server_id ].roles[ role_id ];
+			const role = server.roles[ role_id ];
 			console.log( "Role %s: exports.OP_ROLE = \"%s\";", role.name, role_id );
 		}
 		process.exit( 1 )
