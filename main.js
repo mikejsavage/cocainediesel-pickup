@@ -10,7 +10,7 @@ const config = require( "./config" );
 
 let client;
 let server;
-let last_channel;
+let channel;
 
 let last_name = { };
 let last_message = { };
@@ -43,8 +43,16 @@ function say( fmt, ...args ) {
 	}
 
 	client.sendMessage( {
-		to: last_channel,
+		to: channel,
 		message: util.format( fmt, ...args ),
+	} );
+}
+
+function update_channel_name() {
+	let gametype = gametypes[ config.DEFAULT_GAMETYPE ];
+	client.editChannelInfo( {
+		channelID: channel,
+		name: util.format( "pickup [%d/%d]", gametype.added.length, gametype.required ),
 	} );
 }
 
@@ -86,8 +94,10 @@ function brief_status() {
 
 function remove_player( gt, id ) {
 	const idx = gametypes[ gt ].added.indexOf( id );
-	if( idx != -1 )
+	if( idx != -1 ) {
 		gametypes[ gt ].added.splice( idx, 1 );
+		update_channel_name();
+	}
 	return idx != -1;
 }
 
@@ -222,8 +232,10 @@ function add_command( id, args ) {
 		}
 	}
 
-	if( did_add )
+	if( did_add ) {
 		say( "%s", brief_status() );
+		update_channel_name();
+	}
 }
 
 function remove_command( id, args ) {
@@ -259,7 +271,7 @@ function who_command() {
 
 const op_commands = {
 	pickuphere: function() {
-		console.log( "exports.PICKUP_CHANNEL = \"%s\";", last_channel );
+		console.log( "exports.PICKUP_CHANNEL = \"%s\";", channel );
 	},
 
 	opremove: function( id, args ) {
@@ -344,7 +356,7 @@ function on_message( user, userID, channelID, message, e ) {
 	if( config.PICKUP_CHANNEL != undefined && channelID != config.PICKUP_CHANNEL )
 		return;
 
-	last_channel = channelID;
+	channel = channelID;
 
 	if( userID == client.id )
 		return;
