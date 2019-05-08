@@ -51,13 +51,13 @@ function say( fmt, ...args ) {
 function update_channel_name() {
 	let gametype = gametypes[ config.DEFAULT_GAMETYPE ];
 	let wrestlers = String.fromCodePoint( 0x1f93c );
-	let left_paren = "\uff08";
-	let right_paren = "\uff09";
+	let left_bracket = "\uff3b";
+	let right_bracket = "\uff3d";
 	let slash = "\uff89";
 	client.editChannelInfo( {
 		channelID: channel,
 		name: util.format( "%spickup%s%d%s%d%s", wrestlers,
-			left_paren, gametype.added.length, slash, gametype.required, right_paren ),
+			left_bracket, gametype.added.length, slash, gametype.required, right_bracket ),
 	} );
 }
 
