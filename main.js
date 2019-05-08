@@ -50,9 +50,10 @@ function say( fmt, ...args ) {
 
 function update_channel_name() {
 	let gametype = gametypes[ config.DEFAULT_GAMETYPE ];
+	let slash = "\uff0f";
 	client.editChannelInfo( {
 		channelID: channel,
-		name: util.format( "pickup [%d/%d]", gametype.added.length, gametype.required ),
+		name: util.format( "pickup-%d%s%d", gametype.added.length, slash, gametype.required ),
 	} );
 }
 
