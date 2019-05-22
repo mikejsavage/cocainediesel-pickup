@@ -356,6 +356,8 @@ function on_ready() {
 	}
 
 	console.log( "Connected" );
+
+	update_channel_name();
 }
 
 function on_message( user, userID, channelID, message, e ) {
