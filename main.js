@@ -1,9 +1,11 @@
 #! /usr/bin/env node
 
+const fs = require( "fs" );
+const util = require( "util" );
+
 process.env[ "NODE_PATH" ] = __dirname;
 require( "module" ).Module._initPaths();
 
-const util = require( "util" );
 const Discord = require( "discord" );
 
 const config = require( "./config" );
@@ -23,6 +25,11 @@ for( let gt in config.GAMETYPES ) {
 let afkers;
 let pending_gt;
 let pending_game_unique;
+
+let icons = [ ];
+for( let i = 0; i <= 10; i++ ) {
+	icons[ i ] = fs.readFileSync( i + ".jpg", "base64" );
+}
 
 // returns a unique value so we can compare with some reference to make sure it
 // hasn't changed. used to e.g. halt the first set of afk checks if two games
@@ -427,3 +434,17 @@ function connect() {
 }
 
 connect();
+
+// update the server icon. discord rate limit is 5mins on this
+const seconds = s => s * 1000;
+const minutes = m => seconds( m * 60 );
+setInterval( function() {
+	if( client == null )
+		return;
+
+	let gametype = gametypes[ config.DEFAULT_GAMETYPE ];
+	client.editServer( {
+		serverID: server.id,
+		icon: icons[ gametype.added.length ],
+	}, error_cb );
+}, minutes( 5 ) + seconds( 1 ) );
