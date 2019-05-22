@@ -1,7 +1,7 @@
 #! /usr/bin/env node
 
 process.env[ "NODE_PATH" ] = __dirname;
-require( "module").Module._initPaths();
+require( "module" ).Module._initPaths();
 
 const util = require( "util" );
 const Discord = require( "discord" );
@@ -36,6 +36,12 @@ function unixtime() {
 	return new Date().getTime() / 1000;
 }
 
+function error_cb( e ) {
+	if( e == null )
+		return;
+	console.log( "[" + ( new Date() ).toLocaleString() + "]" + e );
+}
+
 function say( fmt, ...args ) {
 	if( typeof fmt == "object" ) {
 		say( "%s", fmt.join( "\n" ) );
@@ -45,7 +51,7 @@ function say( fmt, ...args ) {
 	client.sendMessage( {
 		to: channel,
 		message: util.format( fmt, ...args ),
-	} );
+	}, error_cb );
 }
 
 function update_channel_name() {
@@ -58,7 +64,7 @@ function update_channel_name() {
 		channelID: channel,
 		name: util.format( "%spickup%s%d%s%d%s", wrestlers,
 			left_bracket, gametype.added.length, slash, gametype.required, right_bracket ),
-	} );
+	}, error_cb );
 }
 
 function get_name( id ) {
@@ -190,7 +196,7 @@ function unafk( channelID, messageID, userID ) {
 		channelID: channelID,
 		messageID: messageID,
 		reaction: String.fromCodePoint( 0x1f44d ),
-	} );
+	}, error_cb );
 
 	if( afkers.length == 0 ) {
 		start_the_game();
