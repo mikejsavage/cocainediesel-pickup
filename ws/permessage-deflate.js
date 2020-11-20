@@ -1,6 +1,6 @@
 'use strict';
 
-const Limiter = require('async-limiter');
+const Limiter = require('./async-limiter');
 const zlib = require('zlib');
 
 const bufferUtil = require('./buffer-util');

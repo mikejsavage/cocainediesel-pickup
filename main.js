@@ -6,13 +6,11 @@ const util = require( "util" );
 process.env[ "NODE_PATH" ] = __dirname;
 require( "module" ).Module._initPaths();
 
-const Discord = require( "discord" );
+const Eris = require( "eris" );
 
 const config = require( "./config" );
 
 let client;
-let server;
-let channel;
 
 let last_name = { };
 let last_message = { };
@@ -43,10 +41,16 @@ function unixtime() {
 	return new Date().getTime() / 1000;
 }
 
-function error_cb( e ) {
-	if( e == null )
-		return;
-	console.log( "[" + ( new Date() ).toLocaleString() + "]" + e );
+function seconds( s ) {
+	return s * 1000;
+}
+
+function minutes( m ) {
+	return seconds( m * 60 );
+}
+
+function error_cb( context, error ) {
+	console.log( context + ": " + error );
 }
 
 function say( fmt, ...args ) {
@@ -55,10 +59,15 @@ function say( fmt, ...args ) {
 		return;
 	}
 
-	client.sendMessage( {
-		to: channel,
-		message: util.format( fmt, ...args ),
-	}, error_cb );
+	client.createMessage( get_channel().id, util.format( fmt, ...args ) ).catch( "say", error_cb );
+}
+
+function get_server() {
+	return client.guilds.get( client.channelGuildMap[ config.PICKUP_CHANNEL ] );
+}
+
+function get_channel() {
+	return get_server().channels.get( config.PICKUP_CHANNEL );
 }
 
 function update_channel_name() {
@@ -67,15 +76,16 @@ function update_channel_name() {
 	let left_bracket = "\uff3b";
 	let right_bracket = "\uff3d";
 	let slash = "\uff89";
-	client.editChannelInfo( {
-		channelID: channel,
+
+	get_channel().edit( {
 		name: util.format( "%spickup%s%d%s%d%s", wrestlers,
 			left_bracket, gametype.added.length, slash, gametype.required, right_bracket ),
-	}, error_cb );
+	} ).catch( "update_channel_name", error_cb );
 }
 
 function get_name( id ) {
-	let name = server.members[ id ] != null ? server.members[ id ].nick : null;
+	let name = get_server().members.get( id ) != null ? get_server().members.get( id ).nick : null;
+	if( name == null ) console.log( "lol what son" );
 	return name != null ? name : last_name[ id ];
 }
 
@@ -141,8 +151,7 @@ function copy_array( arr ) {
 function start_the_game() {
 	const gg = "<:goodgame:" + config.GOODGAME_EMOJI + ">";
 	emoji_border( gg, [
-		"CONNECT TO THE SERVER: connect " + config.IP + ";password " + config.PASSWORD,
-		"OR CLICK HERE: <https://cocainediesel.fun/connect?" + config.PASSWORD + "@" + config.IP + ">",
+		"PLEASE HAVE A GOOD GAME",
 		gametypes[ pending_gt ].added.map( id => "<@" + id + ">" ).join( " " ),
 	] );
 
@@ -165,7 +174,8 @@ function check_afk( attempt, unique ) {
 		return;
 	}
 
-	if( attempt == config.UNAFK_HIGHLIGHTS ) {
+	const max_unafk_highlights = 4;
+	if( attempt == max_unafk_highlights ) {
 		afkers.forEach( id => remove_player_from_all( id ) );
 		const cross = "\u274c";
 		emoji_border( cross, [
@@ -186,24 +196,20 @@ function check_afk( attempt, unique ) {
 		afkers.map( id => "<@" + id + ">" ).join( " " ),
 	] );
 
-	setTimeout( () => check_afk( attempt + 1, unique ), config.UNAFK_DELAY * 1000 );
+	setTimeout( () => check_afk( attempt + 1, unique ), seconds( 30 ) );
 }
 
-function unafk( channelID, messageID, userID ) {
+function unafk( message ) {
 	if( afkers == undefined )
 		return;
 
-	const idx = afkers.indexOf( userID );
+	const idx = afkers.indexOf( message.author.id );
 	if( idx == -1 )
 		return;
 
 	afkers.splice( idx, 1 );
 
-	client.addReaction( {
-		channelID: channelID,
-		messageID: messageID,
-		reaction: String.fromCodePoint( 0x1f44d ),
-	}, error_cb );
+	message.addReaction( String.fromCodePoint( 0x1f44d ) );
 
 	if( afkers.length == 0 ) {
 		start_the_game();
@@ -242,7 +248,7 @@ function add_command( id, args ) {
 
 		if( gametypes[ gt ].added.length == gametypes[ gt ].required ) {
 			const now = unixtime();
-			afkers = gametypes[ gt ].added.filter( id => last_message[ id ] < now - config.AFK_TIME );
+			afkers = gametypes[ gt ].added.filter( id => last_message[ id ] < now - minutes( 10 ) );
 			pending_gt = gt;
 			pending_game_unique = make_unique();
 			check_afk( 1, pending_game_unique );
@@ -288,15 +294,15 @@ function who_command() {
 }
 
 const op_commands = {
-	pickuphere: function() {
-		console.log( "exports.PICKUP_CHANNEL = \"%s\";", channel );
+	pickuphere: function( message ) {
+		console.log( "exports.PICKUP_CHANNEL = \"%s\";", message.channel.id );
 	},
 
-	opremove: function( id, args ) {
+	opremove: function( message, args ) {
 		if( pending_game_unique != undefined )
 			return;
 
-		const target = match( /<@(\d+)>/, args );
+		const target = match( /<@!(\d+)>/, args );
 		if( target ) {
 			let was_added = remove_player_from_all( target );
 			if( was_added )
@@ -320,13 +326,13 @@ const normal_commands = [
 	{ pattern: /^\?\?/, callback: who_command },
 ];
 
-function try_commands( cmds, user, channel, message ) {
-	const space_pos = message.indexOf( " " );
-	const cmd = space_pos == -1 ? message : message.substr( 0, space_pos );
-	const rest = space_pos == -1 ? "" : message.substr( space_pos ).trim();
+function try_commands( cmds, message, content ) {
+	const space_pos = content.indexOf( " " );
+	const cmd = space_pos == -1 ? content : content.substr( 0, space_pos );
+	const rest = space_pos == -1 ? "" : content.substr( space_pos ).trim();
 
 	if( cmds[ cmd ] ) {
-		cmds[ cmd ]( user, rest );
+		cmds[ cmd ]( message, rest );
 		return true;
 	}
 
@@ -335,31 +341,32 @@ function try_commands( cmds, user, channel, message ) {
 
 let offline_uniques = { };
 
-function remove_offline( user, userID, unique ) {
-	if( unique != offline_uniques[ userID ] )
+function remove_offline( name, user_id, unique ) {
+	if( unique != offline_uniques[ user_id ] )
 		return;
 
-	if( remove_player_from_all( userID ) ) {
+	if( remove_player_from_all( user_id ) ) {
 		say( [
-			user + " went offline and was removed",
+			name + " went offline and was removed",
 			brief_status(),
 		] );
 	}
 }
 
 function on_ready() {
-	for( const server_id in client.servers ) {
-		server = client.servers[ server_id ];
-		break;
-	}
-
 	if( config.OP_ROLE == undefined || config.OP_ROLE == "" ) {
 		console.log( "You need to set OP_ROLE" );
-		for( const role_id in server.roles ) {
-			const role = server.roles[ role_id ];
-			console.log( "Role %s: exports.OP_ROLE = \"%s\";", role.name, role_id );
+		for( const [ id, role ] of get_server().roles.entries() ) {
+			console.log( "Role %s: exports.OP_ROLE = \"%s\";", role.name, id );
 		}
 		process.exit( 1 )
+	}
+
+	if( get_server().roles.get( config.OP_ROLE ) == null ) {
+		console.log( "That OP_ROLE doesn't exist" );
+		for( const [ id, role ] of get_server().roles.entries() ) {
+			console.log( "Role %s: exports.OP_ROLE = \"%s\";", role.name, id );
+		}
 	}
 
 	console.log( "Connected" );
@@ -367,51 +374,50 @@ function on_ready() {
 	update_channel_name();
 }
 
-function on_message( user, userID, channelID, message, e ) {
-	last_name[ userID ] = user;
-	last_message[ userID ] = unixtime();
-
-	unafk( channelID, e.d.id, userID );
-
-	if( config.PICKUP_CHANNEL != undefined && channelID != config.PICKUP_CHANNEL )
+function on_message( message ) {
+	if( message.author.id == client.user.id )
 		return;
 
-	channel = channelID;
+	last_name[ message.author.id ] = message.author.nick;
+	last_message[ message.author.id ] = unixtime();
 
-	if( userID == client.id )
+	if( config.PICKUP_CHANNEL != undefined && message.channel.id != config.PICKUP_CHANNEL )
 		return;
 
-	message = message.toLowerCase();
+	unafk( message );
 
-	if( message[ 0 ] == '!' ) {
-		const is_op = e.d.member.roles.includes( config.OP_ROLE );
-		if( is_op && try_commands( op_commands, userID, channelID, message.substr( 1 ) ) )
+	let content = message.content.toLowerCase();
+
+	if( content[ 0 ] == '!' ) {
+		const member = get_server().members.get( message.author.id );
+		const is_op = member.roles.includes( config.OP_ROLE );
+		if( is_op && try_commands( op_commands, message, content.substr( 1 ) ) )
 			return;
 	}
 
 	for( let cmd of normal_commands ) {
-		let e = cmd.pattern.exec( message );
+		let e = cmd.pattern.exec( content );
 		if( e == null )
 			continue;
-		cmd.callback( userID, e[ 1 ] || "" );
+		cmd.callback( message.author.id, e[ 1 ] || "" );
 	}
 }
 
-function on_presence( user, userID, status ) {
-	if( status == "online" ) {
-		offline_uniques[ userID ] = undefined;
+function on_presence( user ) {
+	if( user.status == "online" ) {
+		offline_uniques[ user.id ] = undefined;
 	}
 
-	if( status == "offline" ) {
+	if( user.status == "offline" ) {
 		// mark them as AFK and remove them if they don't come back
 		last_message[ userID ] = unixtime() - config.AFK_TIME - 1;
 		const unique = make_unique();
-		offline_uniques[ userID ] = unique;
-		setTimeout( () => remove_offline( user, userID, unique ), config.OFFLINE_DELAY * 1000 );
+		offline_uniques[ user.id ] = unique;
+		setTimeout( () => remove_offline( user, user.id, unique ), minutes( 5 ) );
 	}
 }
 
-function on_guildMemberRemove( member ) {
+function on_guildMemberRemove( guild, member ) {
 	if( remove_player_from_all( member.id ) ) {
 		say( [
 			member.username + " left the server and was removed",
@@ -421,30 +427,28 @@ function on_guildMemberRemove( member ) {
 }
 
 function connect() {
-	client = new Discord.Client( {
-		autorun: true,
-		token: config.TOKEN,
-	} );
+	client = new Eris( config.TOKEN );
 
 	client.on( "ready", on_ready );
-	client.on( "message", on_message );
-	client.on( "presence", on_presence );
+	client.on( "messageCreate", on_message );
+	client.on( "presenceUpdate", on_presence );
 	client.on( "guildMemberRemove", on_guildMemberRemove );
+
 	client.on( "disconnect", connect );
+	client.on( "error", ( e ) => console.log( e.name + ": " + e.message ) );
+
+	client.connect();
 }
 
 connect();
 
 // update the server icon. discord rate limit is 5mins on this
-const seconds = s => s * 1000;
-const minutes = m => seconds( m * 60 );
 setInterval( function() {
 	if( client == null )
 		return;
 
 	let gametype = gametypes[ config.DEFAULT_GAMETYPE ];
-	client.editServer( {
-		serverID: server.id,
-		icon: icons[ gametype.added.length ],
-	}, error_cb );
+	get_server()
+		.edit( { icon: "data:image/jpeg;base64," + icons[ gametype.added.length ] } )
+		.catch( "set server icon", error_cb );
 }, minutes( 5 ) + seconds( 1 ) );
