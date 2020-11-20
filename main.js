@@ -341,13 +341,13 @@ function try_commands( cmds, message, content ) {
 
 let offline_uniques = { };
 
-function remove_offline( name, user_id, unique ) {
-	if( unique != offline_uniques[ user_id ] )
+function remove_offline( user, unique ) {
+	if( unique != offline_uniques[ user.id ] )
 		return;
 
-	if( remove_player_from_all( user_id ) ) {
+	if( remove_player_from_all( user.id ) ) {
 		say( [
-			name + " went offline and was removed",
+			user.nick + " went offline and was removed",
 			brief_status(),
 		] );
 	}
@@ -410,10 +410,10 @@ function on_presence( user ) {
 
 	if( user.status == "offline" ) {
 		// mark them as AFK and remove them if they don't come back
-		last_message[ userID ] = unixtime() - config.AFK_TIME - 1;
+		last_message[ user.id ] = unixtime() - config.AFK_TIME - 1;
 		const unique = make_unique();
 		offline_uniques[ user.id ] = unique;
-		setTimeout( () => remove_offline( user, user.id, unique ), minutes( 5 ) );
+		setTimeout( () => remove_offline( user, unique ), seconds( 5 ) );
 	}
 }
 
