@@ -440,6 +440,8 @@ client.on( "guildMemberRemove", on_guildMemberRemove );
 client.on( "disconnect", () => client.connect() );
 client.on( "error", ( e ) => console.log( e.name + ": " + e.message ) );
 
+client.connect();
+
 // update the server icon. discord rate limit is 5mins on this
 setInterval( function() {
 	let server = get_server();
