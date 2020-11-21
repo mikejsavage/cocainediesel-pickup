@@ -390,6 +390,10 @@ function on_message( message ) {
 
 	if( content[ 0 ] == '!' ) {
 		const member = get_server().members.get( message.author.id );
+		if( member.roles == null ) {
+			console.log( "????" );
+			console.log( member );
+		}
 		const is_op = member.roles.includes( config.OP_ROLE );
 		if( is_op && try_commands( op_commands, message, content.substr( 1 ) ) )
 			return;
@@ -426,29 +430,23 @@ function on_guildMemberRemove( guild, member ) {
 	}
 }
 
-function connect() {
-	client = new Eris( config.TOKEN );
+client = new Eris( config.TOKEN );
 
-	client.on( "ready", on_ready );
-	client.on( "messageCreate", on_message );
-	client.on( "presenceUpdate", on_presence );
-	client.on( "guildMemberRemove", on_guildMemberRemove );
+client.on( "ready", on_ready );
+client.on( "messageCreate", on_message );
+client.on( "presenceUpdate", on_presence );
+client.on( "guildMemberRemove", on_guildMemberRemove );
 
-	client.on( "disconnect", connect );
-	client.on( "error", ( e ) => console.log( e.name + ": " + e.message ) );
-
-	client.connect();
-}
-
-connect();
+client.on( "disconnect", () => client.connect() );
+client.on( "error", ( e ) => console.log( e.name + ": " + e.message ) );
 
 // update the server icon. discord rate limit is 5mins on this
 setInterval( function() {
-	if( client == null )
+	let server = get_server();
+	if( server == null )
 		return;
 
 	let gametype = gametypes[ config.DEFAULT_GAMETYPE ];
-	get_server()
-		.edit( { icon: "data:image/jpeg;base64," + icons[ gametype.added.length ] } )
+	server.edit( { icon: "data:image/jpeg;base64," + icons[ gametype.added.length ] } )
 		.catch( "set server icon", error_cb );
 }, minutes( 5 ) + seconds( 1 ) );
