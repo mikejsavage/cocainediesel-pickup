@@ -417,7 +417,7 @@ function on_presence( user ) {
 		last_message[ user.id ] = unixtime() - config.AFK_TIME - 1;
 		const unique = make_unique();
 		offline_uniques[ user.id ] = unique;
-		setTimeout( () => remove_offline( user, unique ), seconds( 5 ) );
+		setTimeout( () => remove_offline( user, unique ), minutes( 5 ) );
 	}
 }
 
