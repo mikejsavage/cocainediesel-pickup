@@ -24,6 +24,8 @@ let afkers;
 let pending_gt;
 let pending_game_unique;
 
+const afk_time = minutes( 10 );
+
 let icons = [ ];
 for( let i = 0; i <= 10; i++ ) {
 	icons[ i ] = fs.readFileSync( i + ".jpg", "base64" );
@@ -38,7 +40,7 @@ function make_unique() {
 }
 
 function unixtime() {
-	return new Date().getTime() / 1000;
+	return new Date().getTime();
 }
 
 function seconds( s ) {
@@ -249,7 +251,7 @@ function add_command( id, args ) {
 
 		if( gametypes[ gt ].added.length == gametypes[ gt ].required ) {
 			const now = unixtime();
-			afkers = gametypes[ gt ].added.filter( id => last_message[ id ] < now - minutes( 10 ) );
+			afkers = gametypes[ gt ].added.filter( id => last_message[ id ] < now - afk_time );
 			pending_gt = gt;
 			pending_game_unique = make_unique();
 			check_afk( 1, pending_game_unique );
@@ -415,7 +417,7 @@ function on_presence( user ) {
 
 	if( user.status == "offline" ) {
 		// mark them as AFK and remove them if they don't come back
-		last_message[ user.id ] = unixtime() - config.AFK_TIME - 1;
+		last_message[ user.id ] = unixtime() - afk_time - 1;
 		const unique = make_unique();
 		offline_uniques[ user.id ] = unique;
 		setTimeout( () => remove_offline( user, unique ), minutes( 5 ) );
