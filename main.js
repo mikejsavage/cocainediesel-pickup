@@ -84,7 +84,8 @@ function update_channel_name() {
 }
 
 function get_name( id ) {
-	let name = get_server().members.get( id ) != null ? get_server().members.get( id ).nick : null;
+	let member = get_server().members.get( id );
+	let name = member.nick != null ? member.nick : member.user.username;
 	if( name == null ) console.log( "lol what son" );
 	return name != null ? name : last_name[ id ];
 }
