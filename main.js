@@ -127,7 +127,6 @@ function remove_player( gt, id ) {
 	const idx = gametypes[ gt ].added.indexOf( id );
 	if( idx != -1 ) {
 		gametypes[ gt ].added.splice( idx, 1 );
-		update_channel_name();
 	}
 	return idx != -1;
 }
@@ -163,6 +162,8 @@ function start_the_game() {
 		remove_player_from_all( id );
 	}
 
+	update_channel_name();
+
 	afkers = undefined;
 	pending_gt = undefined;
 	pending_game_unique = undefined;
@@ -185,6 +186,7 @@ function check_afk( attempt, unique ) {
 			afkers.map( id => "<@" + id + ">" ).join( " " ) + " fucked it up for everyone",
 			brief_status(),
 		] );
+		update_channel_name();
 
 		afkers = undefined;
 		pending_gt = undefined;
@@ -280,13 +282,16 @@ function remove_command( id, args ) {
 			if( !( gt in gametypes ) )
 				continue;
 
-			if( remove_player( gt, id ) )
+			if( remove_player( gt, id ) ) {
 				was_added = true;
+			}
 		}
 	}
 
-	if( was_added )
+	if( was_added ) {
 		say( "%s", brief_status() );
+		update_channel_name();
+	}
 }
 
 function who_command() {
@@ -308,10 +313,13 @@ const op_commands = {
 		const target = match( /<@!(\d+)>/, args );
 		if( target ) {
 			let was_added = remove_player_from_all( target );
-			if( was_added )
+			if( was_added ) {
 				say( "%s", brief_status() );
-			else
+				update_channel_name();
+			}
+			else {
 				say( "they aren't added" );
+			}
 		}
 	},
 };
@@ -353,6 +361,7 @@ function remove_offline( user, unique ) {
 			user.nick + " went offline and was removed",
 			brief_status(),
 		] );
+		update_channel_name();
 	}
 }
 
@@ -430,6 +439,7 @@ function on_guildMemberRemove( guild, member ) {
 			member.username + " left the server and was removed",
 			brief_status(),
 		] );
+		update_channel_name();
 	}
 }
 
