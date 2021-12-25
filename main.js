@@ -401,12 +401,7 @@ function on_message( message ) {
 	let content = message.content.toLowerCase();
 
 	if( content[ 0 ] == '!' ) {
-		const member = get_server().members.get( message.author.id );
-		if( member.roles == null ) {
-			console.log( "????" );
-			console.log( member );
-		}
-		const is_op = member.roles.includes( config.OP_ROLE );
+		const is_op = message.member.roles.includes( config.OP_ROLE );
 		if( is_op && try_commands( op_commands, message, content.substr( 1 ) ) )
 			return;
 	}
