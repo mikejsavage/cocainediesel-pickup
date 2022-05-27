@@ -12,7 +12,6 @@ const config = require( "./config" );
 
 let client;
 
-let last_name = { };
 let last_message = { };
 
 let gametypes = { };
@@ -85,11 +84,12 @@ function update_channel_name() {
 	} ).catch( "update_channel_name", error_cb );
 }
 
-function get_name( id ) {
-	let member = get_server().members.get( id );
-	let name = member.nick != null ? member.nick : member.user.username;
-	if( name == null ) console.log( "lol what son" );
-	return name != null ? name : last_name[ id ];
+function get_name( member ) {
+	return member.nick != null ? member.nick : member.user.username;
+}
+
+function get_name_from_id( id ) {
+	return get_name( get_server().members.get( id ) );
 }
 
 function pad_centred( str, width ) {
@@ -102,7 +102,7 @@ function gametype_status( name ) {
 	let gt = gametypes[ name ];
 	let added = String( gt.added.length ).padStart( 2 );
 	let required = String( gt.required ).padEnd( 2 );
-	const names = gt.added.length == 0 ? "dead game" : gt.added.map( get_name ).join( ", " );
+	const names = gt.added.length == 0 ? "dead game" : gt.added.map( get_name_from_id ).join( ", " );
 	return util.format( "%s/%s |%s| %s", added, required, pad_centred( name, 11 ), names );
 }
 
@@ -358,7 +358,7 @@ function remove_offline( user, unique ) {
 
 	if( remove_player_from_all( user.id ) ) {
 		say( [
-			user.nick + " went offline and was removed",
+			get_name( user ) + " went offline and was removed",
 			brief_status(),
 		] );
 		update_channel_name();
@@ -390,7 +390,6 @@ function on_message( message ) {
 	if( message.author.id == client.user.id )
 		return;
 
-	last_name[ message.author.id ] = message.author.nick;
 	last_message[ message.author.id ] = unixtime();
 
 	if( config.PICKUP_CHANNEL != undefined && message.channel.id != config.PICKUP_CHANNEL )
@@ -431,7 +430,7 @@ function on_presence( user ) {
 function on_guildMemberRemove( guild, member ) {
 	if( remove_player_from_all( member.id ) ) {
 		say( [
-			member.username + " left the server and was removed",
+			get_name( member ) + " left the server and was removed",
 			brief_status(),
 		] );
 		update_channel_name();
