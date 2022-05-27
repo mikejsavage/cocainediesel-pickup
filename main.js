@@ -26,7 +26,7 @@ let pending_game_unique;
 const afk_time = minutes( 10 );
 
 let icons = [ ];
-for( let i = 0; i <= 10; i++ ) {
+for( let i = 0; i <= 6; i++ ) {
 	icons[ i ] = fs.readFileSync( i + ".jpg", "base64" );
 }
 
