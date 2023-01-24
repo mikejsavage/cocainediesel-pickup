@@ -331,6 +331,7 @@ const normal_commands = [
 
 	{ pattern: /^!remove\s*(.*)/, callback: remove_command },
 	{ pattern: /^--/, callback: remove_command },
+	{ pattern: /^\u2014/, callback: remove_command }, // iphone --
 	{ pattern: /^-(.+)/, callback: remove_command },
 
 	{ pattern: /^!who/, callback: who_command },
